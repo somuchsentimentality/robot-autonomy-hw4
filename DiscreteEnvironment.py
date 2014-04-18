@@ -63,11 +63,11 @@ class DiscreteEnvironment(object):
         #
         config = [0] * self.dimension
         i=0
-        half = [ x / 2 for x in self.resolution]
+        half = [x / 2 for x in self.resolution]
         while i < len(coord):
-            config[i]=(coord[i] * self.resolution[i]) + self.lower_limits[i] + half
+            config[i]=(coord[i] * self.resolution[i]) + self.lower_limits[i] + half[i]
             i = i+1
-        return config
+        return numpy.array(config)
 
     def GridCoordToNodeId(self,coord):
         

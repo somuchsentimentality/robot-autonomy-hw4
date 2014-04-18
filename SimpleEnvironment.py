@@ -98,9 +98,28 @@ class SimpleEnvironment(object):
             grid_coordinate[2] = idx
             start_config = self.discrete_env.GridCoordToConfiguration(grid_coordinate)
 
-            # TODO: Here you will construct a set of actions
+            # TODO: Here you will construct a set of actionson
             #  to be used during the planning process
             #
+
+            # Since an action is composed of only 3 variables (left, right, and duration),
+            # It is not unreasonable to do a comprehensive action generation.
+            omega_range = 5; # min/max velocity
+            resolution = 0.5;
+            n_pts = int(omega_range * 2 / resolution);
+
+            omega = numpy.linspace(-omega_range, omega_range, n_pts)
+            duration = 0.1 # Can make this a range for even more options
+
+            # Generate all combinations of left and right wheel velocities
+            for om_1 in omega:
+                for om_2 in omega:
+                    ctrl = Control(om_1, om_2, duration)
+                    footprint = self.GenerateFootprintFromControl(start_config, ctrl, stepsize=0.01)
+                    this_action = Action(ctrl, footprint)
+
+                    self.actions[idx].append(this_action)
+
          
             
 
@@ -136,3 +155,9 @@ class SimpleEnvironment(object):
         
         return cost
 
+    def PrintActions(self):
+        # for key in self.actions.keys():
+        key = 0;  # Just choose one key for sake of example
+        for action in self.actions[key]:
+            c = action.control
+            print "(%.2f %.2f) %.2f s" % (c.ul, c.ur, c.dt)
