@@ -19,7 +19,7 @@ class DiscreteEnvironment(object):
         # Figure out the number of grid cells that are in each dimension
         self.num_cells = self.dimension*[0]
         for idx in range(self.dimension):
-            self.num_cells[idx] = numpy.ceil((upper_limits[idx] - lower_limits[idx])/resolution)
+            self.num_cells[idx] = numpy.ceil((upper_limits[idx] - lower_limits[idx])/resolution[idx])
         #print self.num_cells
         
     def ConfigurationToNodeId(self, config):
@@ -51,7 +51,7 @@ class DiscreteEnvironment(object):
         i=0
         coord = [0] * self.dimension
         while i<len(config):
-            coord[i] = numpy.floor((config[i] - self.lower_limits[i])  / self.resolution)
+            coord[i] = numpy.floor((config[i] - self.lower_limits[i])  / self.resolution[i])
             i = i+1
         return coord
 
@@ -63,9 +63,9 @@ class DiscreteEnvironment(object):
         #
         config = [0] * self.dimension
         i=0
-        half = self.resolution/2;
+        half = [ x / 2 for x in self.resolution]
         while i < len(coord):
-            config[i]=(coord[i] * self.resolution) + self.lower_limits[i] + half
+            config[i]=(coord[i] * self.resolution[i]) + self.lower_limits[i] + half
             i = i+1
         return config
 
