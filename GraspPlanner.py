@@ -1,4 +1,5 @@
-import logging, numpy, openravepy
+import logging, openravepy, math
+import numpy as np
 
 class GraspPlanner(object):
 
@@ -6,14 +7,24 @@ class GraspPlanner(object):
         self.robot = robot
         self.base_planner = base_planner
         self.arm_planner = arm_planner
-        self.order_grasps()
-        print grasps_ordered
+        
+        
+
     def GetBasePoseForObjectGrasp(self, obj):
 
         # Load grasp database
-        gmodel = openravepy.databases.grasping.GraspingModel(self.robot, obj)
-        if not gmodel.load():
-            gmodel.autogenerate()
+        self.gmodel = openravepy.databases.grasping.GraspingModel(self.robot, obj)
+        gmodel = self.gmodel # local copy
+        if not self.gmodel.load():
+            self.gmodel.autogenerate()
+        else:
+            print "loaded grasp model"
+        self.graspindices = self.gmodel.graspindices
+        self.grasps = self.gmodel.grasps
+
+        print "ordering grasps..."
+        self.order_grasps()
+        print self.grasps_ordered
 
         base_pose = None
         grasp_config = None
@@ -23,10 +34,15 @@ class GraspPlanner(object):
         #  a base pose and associated grasp config for the 
         #  grasping the bottle
         ###################################################################
+        print "Finding base pose and grasp..."
         validgrasp=self.grasps_ordered[0]
         Tgrasp = gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)
-        manip = robot.SetActiveManipulator('leftarm_torso') # set the manipulator to leftarm
-        ikmodel = databases.inversekinematics.InverseKinematicsModel(robot,iktype=IkParameterization.Type.Transform6D)
+        
+        import IPython
+        IPython.embed()
+
+        manip = self.robot.SetActiveManipulator('left_wam') # set the manipulator to leftarm
+        ikmodel = databases.inversekinematics.InverseKinematicsModel(self.robot,iktype=IkParameterization.Type.Transform6D)
         if not ikmodel.load():
             ikmodel.autogenerate()
 
@@ -35,7 +51,8 @@ class GraspPlanner(object):
            print "sol is", sol
         grasp_config=sol
         # base_pose is not finished
-        basemanip = openravepy.interfaces.BaseManipulation(robot)
+        basemanip = openravepy.interfaces.BaseManipulation(self.robot)
+        basemanip.MoveToHandPosition(matrices=[Tgrasp])
         
         return base_pose, grasp_config
 
@@ -80,7 +97,9 @@ class GraspPlanner(object):
             sigma_max = score2[0]
           if score2[1] > volume_max:
             volume_max = score2[1]
-        print sigma_max 
+
+        # print sigma_max 
+
         for grasp in self.grasps_ordered:
           score2 = self.eval_grasp(grasp)
           min_sigma = (float(score2[0])/sigma_max) 

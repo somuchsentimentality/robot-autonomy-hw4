@@ -19,8 +19,8 @@ class SimpleEnvironment(object):
         self.herb = herb
         self.robot = herb.robot
         self.boundary_limits = [[-5., -5., -numpy.pi], [5., 5., numpy.pi]]
-        lower_limits, upper_limits = self.boundary_limits
-        self.discrete_env = DiscreteEnvironment(resolution, lower_limits, upper_limits)
+        self.lower_limits, self.upper_limits = self.boundary_limits
+        self.discrete_env = DiscreteEnvironment(resolution, self.lower_limits, self.upper_limits)
 
         self.resolution = resolution
         self.ConstructActions()
