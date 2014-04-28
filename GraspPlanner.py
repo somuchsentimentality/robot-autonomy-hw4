@@ -37,18 +37,17 @@ class GraspPlanner(object):
         print "Finding base pose and grasp..."
         validgrasp=self.grasps_ordered[0]
         Tgrasp = gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)
-        
+
+        manip = self.robot.SetActiveManipulator('left_wam') # set the manipulator to leftarm
+        # self.robot.ikmodel # if needed
+  
         import IPython
         IPython.embed()
 
-        manip = self.robot.SetActiveManipulator('left_wam') # set the manipulator to leftarm
-        ikmodel = databases.inversekinematics.InverseKinematicsModel(self.robot,iktype=IkParameterization.Type.Transform6D)
-        if not ikmodel.load():
-            ikmodel.autogenerate()
-
-        with env: # lock environment
+        with openravepy.Environment(): # lock environment
            sol = manip.FindIKSolution(Tgrasp, IkFilterOptions.CheckEnvCollisions) 
            print "sol is", sol
+
         grasp_config=sol
         # base_pose is not finished
         basemanip = openravepy.interfaces.BaseManipulation(self.robot)
