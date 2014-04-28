@@ -104,12 +104,12 @@ class SimpleEnvironment(object):
 
             # Since an action is composed of only 3 variables (left, right, and duration),
             # It is not unreasonable to do a comprehensive action generation.
-            omega_range = 5; # min/max velocity
-            resolution = 0.5;
+            omega_range = 1; # min/max velocity
+            resolution = 0.1;
             n_pts = int(omega_range * 2 / resolution);
 
             omega = numpy.linspace(-omega_range, omega_range, n_pts)
-            duration = 0.1 # Can make this a range for even more options
+            duration = 1 # Can make this a range for even more options
 
             # Generate all combinations of left and right wheel velocities
             for om_1 in omega:
