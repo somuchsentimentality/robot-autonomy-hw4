@@ -14,40 +14,38 @@ class AStarPlanner(object):
     def Plan(self, start_config, goal_config):
 
 	print "Searching..."
+	
 	starttime = time.clock()
-        plan = []
+        pointPlan = []
+	plan = []
+	actionlist = {}
 	if self.visualize and hasattr(self.planning_env, 'InitializePlot'):
             self.planning_env.InitializePlot(goal_config)
         Queue= []
         visitedQueue=[]
         dictionary={}
         costQueue=[]
-	
         startPoint=self.discrete_env.ConfigurationToNodeId(start_config)
         goalPoint=self.discrete_env.ConfigurationToNodeId(goal_config)
+	#print goalPoint
 	
-
         Queue.append(startPoint)
         costQueue.append([self.planning_env.ComputeHeuristicCost(startPoint, goalPoint),startPoint])
-	
         costQueueElement=costQueue.pop(0)
-	
         visitedQueue.append(costQueueElement[1])
         costQueue.append([0,startPoint])
-	
-	
+	#print costQueueElement[1]
 	
         while costQueueElement[1]!=goalPoint:
             if len(Queue)==0:
                 plan=[]
                 return plan
-	    
-            successor=self.planning_env.GetSuccessors(costQueueElement[1])
-	   
-	    
+
+	    successor=self.planning_env.GetSuccessors(costQueueElement[1])
             for i in successor:
 		if self.visualize:
                     self.planning_env.PlotEdge2(self.discrete_env.NodeIdToConfiguration(i), self.discrete_env.NodeIdToConfiguration(costQueueElement[1]), "k", 1.5)
+		actionlist[i] = successor[i]
                 if i not in visitedQueue and i not in Queue:        
                     Queue.append(i)
                     dictionary[i]=costQueueElement[1]
@@ -56,18 +54,14 @@ class AStarPlanner(object):
                     while X!=startPoint:
 			costG=costG+self.planning_env.ComputeDistance(X, dictionary[X])
                         X=dictionary[X]
-                    heurPlusG=5*self.planning_env.ComputeHeuristicCost(i, goalPoint) + costG
-                    costQueue.append([heurPlusG,i])
-		   
-		  
-		
+                    heurPlusG=self.planning_env.ComputeHeuristicCost(i, goalPoint) + costG
+                    costQueue.append([heurPlusG,i]) 
+	    #print costQueue
             costQueue=sorted(costQueue)
-	    
             costQueueElement=costQueue.pop(0)
             Queue.remove(costQueueElement[1])
 	    visitedQueue.append(costQueueElement[1])
 	
-
 	if self.visualize:
 	    pl.draw()
 	duration = time.clock() - starttime
@@ -76,13 +70,25 @@ class AStarPlanner(object):
         point=goalPoint
 	pathlength = 0
         while point!=startPoint:
-            plan.append(self.discrete_env.NodeIdToConfiguration(point))
+	    #print point
+            pointPlan.append(self.discrete_env.NodeIdToConfiguration(point))
 	    pathlength = pathlength + self.planning_env.ComputeDistance(point, dictionary[point])
             point=dictionary[point]
 	   
-        plan.append(start_config)
-        plan.reverse()
+        pointPlan.append(start_config)
+        pointPlan.reverse()
 	
+	#print pointPlan
+	for i in pointPlan[1:]:
+	    #print i
+
+	    idx = self.discrete_env.ConfigurationToNodeId(i)
+	    print idx
+	    plan.append(actionlist[idx])
+	    #print i
+	    #print successor[i]
+
+	#print plan
 	print "Time =", duration, "s"
 	print "Nodes popped =", len(visitedQueue)
 	print "Path length =", pathlength, "m"
