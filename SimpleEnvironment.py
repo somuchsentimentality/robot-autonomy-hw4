@@ -20,6 +20,7 @@ class SimpleEnvironment(object):
         self.robot = herb.robot
         self.boundary_limits = [[-5., -5., -numpy.pi], [5., 5., numpy.pi]]
         self.lower_limits, self.upper_limits = self.boundary_limits
+	print self.lower_limits
         self.discrete_env = DiscreteEnvironment(resolution, self.lower_limits, self.upper_limits)
 
         self.resolution = resolution
@@ -97,6 +98,7 @@ class SimpleEnvironment(object):
             self.actions[idx] = []
             grid_coordinate[2] = idx
             start_config = self.discrete_env.GridCoordToConfiguration(grid_coordinate)
+	    #print start_config
 
             # TODO: Here you will construct a set of actionson
             #  to be used during the planning process
@@ -119,19 +121,29 @@ class SimpleEnvironment(object):
                     this_action = Action(ctrl, footprint)
 
                     self.actions[idx].append(this_action)
-
          
             
 
     def GetSuccessors(self, node_id):
 
-        successors = []
+        successors = {}
 
         # TODO: Here you will implement a function that looks
         #  up the configuration associated with the particular node_id
         #  and return a list of node_ids and controls that represent the neighboring
         #  nodes
         
+	
+	currentConfiguration = self.discrete_env.NodeIdToConfiguration(node_id)
+	currentCoord = self.discrete_env.NodeIdToGridCoord(node_id)
+	#print currentConfiguration
+	#print currentCoord
+	#print currentCoord[2]
+	for action in self.actions[currentCoord[2]]:
+	    
+	    successorNodeid = self.discrete_env.ConfigurationToNodeId(currentConfiguration + action.footprint[len(action.footprint)-1])
+	    successors[successorNodeid] = action
+	#print successors
         return successors
 
     def ComputeDistance(self, start_id, end_id):
@@ -141,6 +153,11 @@ class SimpleEnvironment(object):
         # TODO: Here you will implement a function that 
         # computes the distance between the configurations given
         # by the two node ids
+
+	start_config = numpy.array(self.discrete_env.NodeIdToConfiguration(start_id))
+        end_config = numpy.array(self.discrete_env.NodeIdToConfiguration(end_id))
+        
+        dist = numpy.linalg.norm(start_config - end_config)
 
         return dist
 
@@ -152,6 +169,17 @@ class SimpleEnvironment(object):
         # computes the heuristic cost between the configurations
         # given by the two node ids
         
+	# Heuristic Cost in uncertain for this case with three resolution,
+	# I will update this part later
+
+	start_coord = self.discrete_env.NodeIdToGridCoord(start_id)
+        goal_coord = self.discrete_env.NodeIdToGridCoord(goal_id)
+	
+	cost = 0
+	for i in range(len(start_coord)):
+	    cost = cost + abs(goal_coord[i]-start_coord[i])*self.discrete_env.resolution[i]
+	    
+	#cost = cost*self.discrete_env.resolution
         
         return cost
 
@@ -161,3 +189,8 @@ class SimpleEnvironment(object):
         for action in self.actions[key]:
             c = action.control
             print "(%.2f %.2f) %.2f s" % (c.ul, c.ur, c.dt)
+
+    def PlotEdge2(self, sconfig, econfig, color, size):
+        pl.plot([sconfig[0], econfig[0]],
+                [sconfig[1], econfig[1]],
+                color, linewidth=size)
