@@ -39,15 +39,19 @@ class GraspPlanner(object):
         #  grasping the bottle
         ###################################################################
         print "Finding base pose and grasp..."
-        validgrasp=self.grasps_ordered[0]
-        Tgrasp = gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)
+        for validgrasp in self.grasps_ordered:
+          Tgrasp = gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)
 
-        print "Compute base distribution for grasp..."
-        densityfn,samplerfn,bounds = self.irmodel.computeBaseDistribution(Tgrasp)
+          print "Compute base distribution for grasp..."
+          densityfn,samplerfn,bounds = self.irmodel.computeBaseDistribution(Tgrasp)
 
-        print "Finding a base pose..."
-        manip = self.robot.SetActiveManipulator('left_wam')
-        goals = self.GetBasePosesFromIR(manip, samplerfn, Tgrasp, 1, 20) # timeout in seconds
+          print "Finding a base pose..."
+          manip = self.robot.SetActiveManipulator('left_wam')
+          goals = self.GetBasePosesFromIR(manip, samplerfn, Tgrasp, 1, 2) # timeout in seconds
+
+          if len(goals) > 0:
+            print "Found grasp"
+            break
 
         # goals is a list of : (Tgrasp,pose,values)
         goal_idx = 0
@@ -55,6 +59,8 @@ class GraspPlanner(object):
         grasp_config = goals[goal_idx][2]
 
         print "Base_pose: %r\n Grasp_config: %r" % (base_pose, grasp_config)
+
+
         
         return base_pose, grasp_config
 
@@ -64,32 +70,44 @@ class GraspPlanner(object):
         numfailures = 0
         starttime = time.time()
 
-        with self.robot:
-          while len(goals) < n_goals:
+        # with self.robot:
+        while len(goals) < n_goals:
             
-            if time.time()-starttime > timeout:
-              print "GetBasePosesFromIR: TIMEOUT!"
-              break
+          if time.time()-starttime > timeout:
+            print "GetBasePosesFromIR: TIMEOUT!"
+            break
 
-            poses,jointstate = samplerfn(n_goals-len(goals))
+          poses,jointstate = samplerfn(n_goals-len(goals))
           
-            for pose in poses:
-              self.robot.SetTransform(pose)
-              self.robot.SetDOFValues(*jointstate)
+          for pose in poses:
+            # import IPython
+            # IPython.embed()
+            self.robot.SetTransform(pose)
+            self.robot.SetDOFValues(*jointstate)
 
-              # validate that base is not in collision
-              if not manip.CheckIndependentCollision(openravepy.CollisionReport()):
-                q = manip.FindIKSolution(Tgrasp, filteroptions=openravepy.IkFilterOptions.IgnoreSelfCollisions)
-                 #,filteroptions=openravepy.IkFilterOptions.CheckEnvCollisions)
-                
-                if q is not None:
-                  values = self.robot.GetDOFValues()
-                  values[manip.GetArmIndices()] = q
-                  goals.append((Tgrasp,pose,values))
-                
-                elif manip.FindIKSolution(Tgrasp,0) is None:
-                  numfailures += 1
-                  print "Grasp is in collision!"
+            # validate that base is not in collision
+            if not manip.CheckIndependentCollision(openravepy.CollisionReport()):
+              arm_config = manip.FindIKSolution(Tgrasp, filteroptions=openravepy.IkFilterOptions.CheckEnvCollisions)
+                #filteroptions=openravepy.IkFilterOptions.IgnoreSelfCollisions)
+              #,
+              
+
+              if arm_config is not None:
+                # values = self.robot.GetDOFValues()
+                # values[manip.GetArmIndices()] = arm_config
+                pose = self.robot.GetTransform()
+                xy_pose = [pose[0][3], pose[1][3]]
+                goals.append((Tgrasp,xy_pose,arm_config))
+                # import IPython
+                # IPython.embed()
+                # Visualize - only works if with self.robot() is removed
+                self.robot.SetActiveDOFValues(arm_config)
+                # self.robot.SetTransform(pose)
+
+
+              elif manip.FindIKSolution(Tgrasp,0) is None:
+                numfailures += 1
+                print "Grasp is in collision!"
               #else:
                 # print "Base is in self collision"
                 
@@ -129,7 +147,7 @@ class GraspPlanner(object):
     # copy from hw1, order the grasps - call eval grasp on each, set the 'performance' index, and sort
     def order_grasps(self):
         self.grasps_ordered = self.grasps.copy() #you should change the order of self.grasps_ordered
-        return None
+        # return None
 
         sigma_max=0
         volume_max=0
