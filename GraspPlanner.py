@@ -1,5 +1,4 @@
-import logging, openravepy, math
-import numpy as np
+import logging, openravepy, math, time, numpy
 
 class GraspPlanner(object):
 
@@ -8,7 +7,12 @@ class GraspPlanner(object):
         self.base_planner = base_planner
         self.arm_planner = arm_planner
         
-        
+        print "Loading IR model for GraspPlanner"
+        self.irmodel = openravepy.databases.inversereachability.InverseReachabilityModel(robot)
+        if not self.irmodel.load():
+          print "FAILED TO LOAD IR MODEL"
+        else:
+          print "IR loaded"
 
     def GetBasePoseForObjectGrasp(self, obj):
 
@@ -38,22 +42,59 @@ class GraspPlanner(object):
         validgrasp=self.grasps_ordered[0]
         Tgrasp = gmodel.getGlobalGraspTransform(validgrasp,collisionfree=True)
 
-        manip = self.robot.SetActiveManipulator('left_wam') # set the manipulator to leftarm
-        # self.robot.ikmodel # if needed
-  
-        import IPython
-        IPython.embed()
+        print "Compute base distribution for grasp..."
+        densityfn,samplerfn,bounds = self.irmodel.computeBaseDistribution(Tgrasp)
 
-        with openravepy.Environment(): # lock environment
-           sol = manip.FindIKSolution(Tgrasp, IkFilterOptions.CheckEnvCollisions) 
-           print "sol is", sol
+        print "Finding a base pose..."
+        manip = self.robot.SetActiveManipulator('left_wam')
+        goals = self.GetBasePosesFromIR(manip, samplerfn, Tgrasp, 1, 20) # timeout in seconds
 
-        grasp_config=sol
-        # base_pose is not finished
-        basemanip = openravepy.interfaces.BaseManipulation(self.robot)
-        basemanip.MoveToHandPosition(matrices=[Tgrasp])
+        # goals is a list of : (Tgrasp,pose,values)
+        goal_idx = 0
+        base_pose = goals[goal_idx][1] # Don't care which, just need one that works
+        grasp_config = goals[goal_idx][2]
+
+        print "Base_pose: %r\n Grasp_config: %r" % (base_pose, grasp_config)
         
         return base_pose, grasp_config
+
+    def GetBasePosesFromIR(self, manip, samplerfn, Tgrasp, n_goals, timeout):
+        # initialize sampling parameters
+        goals = []
+        numfailures = 0
+        starttime = time.time()
+
+        with self.robot:
+          while len(goals) < n_goals:
+            
+            if time.time()-starttime > timeout:
+              print "GetBasePosesFromIR: TIMEOUT!"
+              break
+
+            poses,jointstate = samplerfn(n_goals-len(goals))
+          
+            for pose in poses:
+              self.robot.SetTransform(pose)
+              self.robot.SetDOFValues(*jointstate)
+
+              # validate that base is not in collision
+              if not manip.CheckIndependentCollision(openravepy.CollisionReport()):
+                q = manip.FindIKSolution(Tgrasp, filteroptions=openravepy.IkFilterOptions.IgnoreSelfCollisions)
+                 #,filteroptions=openravepy.IkFilterOptions.CheckEnvCollisions)
+                
+                if q is not None:
+                  values = self.robot.GetDOFValues()
+                  values[manip.GetArmIndices()] = q
+                  goals.append((Tgrasp,pose,values))
+                
+                elif manip.FindIKSolution(Tgrasp,0) is None:
+                  numfailures += 1
+                  print "Grasp is in collision!"
+              #else:
+                # print "Base is in self collision"
+                
+        return goals
+
 
     def PlanToGrasp(self, obj):
 
@@ -88,6 +129,8 @@ class GraspPlanner(object):
     # copy from hw1, order the grasps - call eval grasp on each, set the 'performance' index, and sort
     def order_grasps(self):
         self.grasps_ordered = self.grasps.copy() #you should change the order of self.grasps_ordered
+        return None
+
         sigma_max=0
         volume_max=0
         for grasp in self.grasps_ordered:
@@ -106,7 +149,7 @@ class GraspPlanner(object):
           score=0.8*min_sigma+0.2*volume
           grasp[self.graspindices.get('performance')] = score
         # sort!
-        order = np.argsort(self.grasps_ordered[:,self.graspindices.get('performance')[0]])
+        order = numpy.argsort(self.grasps_ordered[:,self.graspindices.get('performance')[0]])
         order = order[::-1]
         print order
         self.grasps_ordered = self.grasps_ordered[order]
@@ -118,30 +161,30 @@ class GraspPlanner(object):
           contacts,finalconfig,mindist,volume = self.gmodel.testGrasp(grasp=grasp,translate=True,forceclosure=False)
           obj_position = self.gmodel.target.GetTransform()[0:3,3]
           # for each contact
-          G = np.array([]) #the wrench matrix
+          G = numpy.array([]) #the wrench matrix
           for c in contacts:
             pos = c[0:3] - obj_position
             dir = -c[3:] #this is already a unit vector
             #TODO fill G
-            dir=np.array(dir)
-            w=np.append(dir,np.cross(pos,dir))
-            G=np.append(G,w)
+            dir=numpy.array(dir)
+            w=numpy.append(dir,numpy.cross(pos,dir))
+            G=numpy.append(G,w)
           #TODO use G to compute scrores as discussed in class
           volume = 0
           nsize=len(G)
           G=G.reshape(nsize/6,6)
           G=G.transpose()
-          s,v,d=np.linalg.svd(G)
+          s,v,d=numpy.linalg.svd(G)
           #from N's version
           min_sigma = min(v)
           G1 = G.transpose()
-          A = np.dot(G,G1)
-          B = np.linalg.det(A)
+          A = numpy.dot(G,G1)
+          B = numpy.linalg.det(A)
           if B >= 0:
             volume = math.sqrt(B)
           else: 
             volume=0
-          sc=np.array([min_sigma, volume])
+          sc=numpy.array([min_sigma, volume])
         #  print sc
           return sc #change this
         except openravepy.planning_error,e:
