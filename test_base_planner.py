@@ -60,7 +60,7 @@ if __name__ == "__main__":
     #gid = base_env.discrete_env.ConfigurationToNodeId(numpy.array[4,3,0])
     #print sid
     #goal_config = base_env.discrete_env.NodeIdToConfiguration(gid)
-    goal_config = numpy.array([-3,2,0])
+    goal_config = numpy.array([4,0,0])
     herb_base.SetCurrentConfiguration(goal_config)
 
     tgoal = robot.GetTransform()
