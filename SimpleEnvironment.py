@@ -13,6 +13,7 @@ class Action(object):
         self.control = control
         self.footprint = footprint
 
+
 class SimpleEnvironment(object):
     
     def __init__(self, herb, resolution):
@@ -141,11 +142,9 @@ class SimpleEnvironment(object):
 	
 	currentConfiguration = self.discrete_env.NodeIdToConfiguration(node_id)
 	currentCoord = self.discrete_env.NodeIdToGridCoord(node_id)
-	#print currentConfiguration
-	#print currentCoord
-	#print currentCoord[2]
+	
 	for action in self.actions[currentCoord[2]]:
-	    successorNodeid = self.discrete_env.ConfigurationToNodeId(currentConfiguration + action.footprint[len(action.footprint)-1])
+	    successorNodeid = self.discrete_env.ConfigurationToNodeId(currentConfiguration - action.footprint[len(action.footprint)-1])
 	    config = self.discrete_env.NodeIdToConfiguration(successorNodeid)
 	    
 	    # For each action check whether generated footprint is collision free
@@ -163,8 +162,7 @@ class SimpleEnvironment(object):
                     break
             if (not has_collision):
                 successors[successorNodeid] = action
-		
-	#print successors
+	
         return successors
 
     def ComputeDistance(self, start_id, end_id):
@@ -199,9 +197,8 @@ class SimpleEnvironment(object):
 	cost = 0
 	for i in range(len(start_coord)-1):
 	    cost = cost + abs(goal_coord[i]-start_coord[i])*self.discrete_env.resolution[i]
-	    
-	#cost = cost*self.discrete_env.resolution
-        
+
+
         return cost
 
     def PrintActions(self):
