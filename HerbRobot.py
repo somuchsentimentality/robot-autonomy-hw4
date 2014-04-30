@@ -35,7 +35,6 @@ class HerbRobot(object):
         return traj
 
     def ExecuteTrajectory(self, traj):
-
         # Send the trajectory to the controller and wait for execution to complete
         self.robot.GetController().SetPath(traj)
         self.robot.WaitForController(0)
