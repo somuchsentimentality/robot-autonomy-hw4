@@ -57,7 +57,8 @@ class AStarPlanner(object):
                     while X!=startPoint:
 			costG=costG+self.planning_env.ComputeDistance(X, dictionary[X])
                         X=dictionary[X]
-                    heurPlusG=self.planning_env.ComputeHeuristicCost(i, goalPoint) + costG
+                    F = self.planning_env.ComputeHeuristicCost(i, goalPoint)
+                    heurPlusG= 0.7*F + 0.3*costG
                     costQueue.append([heurPlusG,i]) 
             costQueue=sorted(costQueue)
             costQueueElement=costQueue.pop(0)
@@ -96,3 +97,13 @@ class AStarPlanner(object):
 	print "Nodes popped =", len(visitedQueue)
 	print "Path length =", pathlength, "m"
         return plan
+
+    def GetConfigXYDistance(self,nodeID_1, nodeID_2):
+        config_1 = self.discrete_env.NodeIdToConfiguration(nodeID_1)
+        config_2 = self.discrete_env.NodeIdToConfiguration(nodeID_2)
+        paired = zip(config_1, config_2)
+
+        diff_sqrd = [(x[0] - x[1])*(x[0] - x[1]) for x in paired]
+
+        dist = math.sqrt(diff_sqrd[0] + diff_sqrd[1]) # only use x,y coords
+        return dist

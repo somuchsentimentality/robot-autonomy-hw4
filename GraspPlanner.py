@@ -53,6 +53,7 @@ class GraspPlanner(object):
             print "Found grasp"
             break
 
+        self.Tgrasp = Tgrasp
         # goals is a list of : (Tgrasp,pose,values)
         goal_idx = 0
         base_pose = goals[goal_idx][1] # Don't care which, just need one that works
@@ -139,6 +140,17 @@ class GraspPlanner(object):
 
         print 'Executing base trajectory'
         self.base_planner.planning_env.herb.ExecuteTrajectory(base_traj)
+
+        # It is very likely the base does not reach the original goal with high accuracy,
+        # find a new IK solution
+        manip = self.robot.SetActiveManipulator('left_wam')
+        new_grasp_config = manip.FindIKSolution(self.Tgrasp, filteroptions=openravepy.IkFilterOptions.CheckEnvCollisions)
+
+        if new_grasp_config is not None:
+          print "Found new IK config"
+          grasp_config = new_grasp_config
+        else:
+          print "Using old IK config"
 
         # Now plan the arm to the grasp configuration
         start_config = numpy.array(self.arm_planner.planning_env.herb.GetCurrentConfiguration())

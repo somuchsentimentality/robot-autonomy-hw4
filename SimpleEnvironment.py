@@ -113,11 +113,11 @@ class SimpleEnvironment(object):
             # Since an action is composed of only 3 variables (left, right, and duration),
             # It is not unreasonable to do a comprehensive action generation.
             omega_range = 1; # min/max velocity
-            resolution = 0.125;
+            resolution = 0.5;
             n_pts = int(omega_range * 2 / resolution);
 
             omega = numpy.linspace(-omega_range, omega_range, n_pts)
-            duration = numpy.linspace(0.1, 2, 10) # Can make this a range for even more options
+            duration = numpy.linspace(0.05, 1, 20) # Can make this a range for even more options
 
 
             # Generate all combinations of left and right wheel velocities
@@ -128,7 +128,7 @@ class SimpleEnvironment(object):
                         ctrl = Control(om_1, om_2, dur)
                         footprint = self.GenerateFootprintFromControl(start_config, ctrl, stepsize=0.01)
                         this_action = Action(ctrl, footprint)
-
+                        # print this_action
                         self.actions[idx].append(this_action)
          
             
@@ -205,7 +205,11 @@ class SimpleEnvironment(object):
         for i in range(len(start_coord)):
             diff = abs(goal_coord[i]-start_coord[i])
 
+            # Weight heavily towards orientation
             # if i == 2:
+            #     diff *= 0.8
+            # else:
+            #     diff *= 0.1
 
 
             cost += diff**2 
