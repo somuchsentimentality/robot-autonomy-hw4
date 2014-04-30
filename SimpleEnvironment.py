@@ -30,6 +30,10 @@ class SimpleEnvironment(object):
         self.discrete_env = DiscreteEnvironment(resolution, self.lower_limits, self.upper_limits)
         self.resolution = resolution
         self.ConstructActions()
+
+        self.PlotActionFootprints(0)
+        import IPython
+        IPython.embed()
 	
 
     def GenerateFootprintFromControl(self, start_config, control, stepsize=0.01):
@@ -112,26 +116,37 @@ class SimpleEnvironment(object):
 
             # Since an action is composed of only 3 variables (left, right, and duration),
             # It is not unreasonable to do a comprehensive action generation.
-            omega_range = 1; # min/max velocity
-            resolution = 0.25;
+            omega_range = 0.5; # min/max velocity
+            resolution = 0.1;
             n_pts = int(omega_range * 2 / resolution);
 
             omega = numpy.linspace(-omega_range, omega_range, n_pts)
-            duration = numpy.linspace(0.01, 1, 10) # Can make this a range for even more options
+            duration = 1 # Can make this a range for even more options
 
-
-            # Generate all combinations of left and right wheel velocities
-	    #omega = numpy.array([-0.2, -0.1, 0, 0.1, 0.2])
-            for om_1 in omega:
-                for om_2 in omega:
-                    for dur in duration:
-                        ctrl = Control(om_1, om_2, dur)
-                        footprint = self.GenerateFootprintFromControl(start_config, ctrl, stepsize=0.01)
-                        this_action = Action(ctrl, footprint)
-                        # print this_action
-                        self.actions[idx].append(this_action)
-         
+            controls = []
+            long_duration = 3
+            duration = 1.5
+            # controls.append(om1, om2, duration)
+            controls.append(Control(1, 0.5, long_duration))
+            controls.append(Control(0.5, 1, long_duration))
+            controls.append(Control(-1, -0.5, long_duration))
+            controls.append(Control(-0.5, -1, long_duration))
             
+            controls.append(Control(1, 0.2, long_duration))
+            controls.append(Control(0.2, 1, long_duration))
+            controls.append(Control(-1, -0.2, long_duration))
+            controls.append(Control(-0.2, -1, long_duration))
+
+            controls.append(Control(1, 1, duration))
+            controls.append(Control(-1, -1, duration))
+
+
+            for ctrl in controls:
+                footprint = self.GenerateFootprintFromControl(start_config, ctrl, stepsize=0.01)
+                this_action = Action(ctrl, footprint)
+                # print this_action
+                self.actions[idx].append(this_action)
+           
     def GetSuccessors(self, node_id):
         successors = {}
 
@@ -154,7 +169,7 @@ class SimpleEnvironment(object):
             for body in self.env.GetBodies():
                 if self.env.CheckCollision(self.robot, body):
                     collisionfree = False
-                    print "Successor in collision!"
+                    # print "Successor in collision!"
                     break
 
             has_collision = False
