@@ -132,7 +132,8 @@ class SimpleEnvironment(object):
             
     def GetSuccessors(self, node_id):
 
-        successors = {}
+     
+	successors = {}
 
         # TODO: Here you will implement a function that looks
         #  up the configuration associated with the particular node_id
@@ -144,7 +145,7 @@ class SimpleEnvironment(object):
 	currentCoord = self.discrete_env.NodeIdToGridCoord(node_id)
 	
 	for action in self.actions[currentCoord[2]]:
-	    successorNodeid = self.discrete_env.ConfigurationToNodeId(currentConfiguration - action.footprint[len(action.footprint)-1])
+	    successorNodeid = self.discrete_env.ConfigurationToNodeId(currentConfiguration + action.footprint[len(action.footprint)-1])
 	    config = self.discrete_env.NodeIdToConfiguration(successorNodeid)
 	    
 	    # For each action check whether generated footprint is collision free
@@ -167,7 +168,6 @@ class SimpleEnvironment(object):
                     break
             if (not has_collision):
                 successors[successorNodeid] = action
-	
         return successors
 
     def ComputeDistance(self, start_id, end_id):
