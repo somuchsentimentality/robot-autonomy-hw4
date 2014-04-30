@@ -1,6 +1,7 @@
 import pylab as pl
 from DiscreteEnvironment import DiscreteEnvironment
 import time
+import numpy
 
 class AStarPlanner(object):
     
@@ -34,12 +35,13 @@ class AStarPlanner(object):
         costQueueElement=costQueue.pop(0)
         visitedQueue.append(costQueueElement[1])
         costQueue.append([0,startPoint])
-	#print costQueueElement[1]
+	print costQueueElement[1]
+	print goalPoint
 	
         while costQueueElement[1]!=goalPoint:
             if len(Queue)==0:
                 plan=[]
-                return plan
+                
 
 	    successor=self.planning_env.GetSuccessors(costQueueElement[1])
             for i in successor:
@@ -70,25 +72,19 @@ class AStarPlanner(object):
         point=goalPoint
 	pathlength = 0
         while point!=startPoint:
-	    #print point
             pointPlan.append(self.discrete_env.NodeIdToConfiguration(point))
 	    pathlength = pathlength + self.planning_env.ComputeDistance(point, dictionary[point])
             point=dictionary[point]
 	   
         pointPlan.append(start_config)
-        pointPlan.reverse()
+        #pointPlan.reverse()
 	
-	#print pointPlan
-	for i in pointPlan[1:]:
-	    #print i
-
+	for i in pointPlan:
 	    idx = self.discrete_env.ConfigurationToNodeId(i)
-	    print idx
 	    plan.append(actionlist[idx])
-	    #print i
-	    #print successor[i]
 
-	#print plan
+	plan  = numpy.array(plan)
+	    
 	print "Time =", duration, "s"
 	print "Nodes popped =", len(visitedQueue)
 	print "Path length =", pathlength, "m"
