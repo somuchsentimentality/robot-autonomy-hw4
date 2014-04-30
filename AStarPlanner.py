@@ -20,11 +20,11 @@ class AStarPlanner(object):
         pointPlan = []
 	plan = []
 	actionlist = {}
+	dictionary={}
 	if self.visualize and hasattr(self.planning_env, 'InitializePlot'):
             self.planning_env.InitializePlot(goal_config)
         Queue= []
         visitedQueue=[]
-        dictionary={}
         costQueue=[]
         startPoint=self.discrete_env.ConfigurationToNodeId(start_config)
         goalPoint=self.discrete_env.ConfigurationToNodeId(goal_config)
@@ -35,19 +35,20 @@ class AStarPlanner(object):
         costQueueElement=costQueue.pop(0)
         visitedQueue.append(costQueueElement[1])
         costQueue.append([0,startPoint])
-	print costQueueElement[1]
-	print goalPoint
-	
+
         while costQueueElement[1]!=goalPoint:
             if len(Queue)==0:
                 plan=[]
-                
+       
+	    successor = self.planning_env.GetSuccessors(costQueueElement[1]);
 
-	    successor=self.planning_env.GetSuccessors(costQueueElement[1])
+	    for j in successor:
+		if j not in actionlist.keys():
+		    actionlist[j] = successor[j] 
+
             for i in successor:
 		if self.visualize:
                     self.planning_env.PlotEdge2(self.discrete_env.NodeIdToConfiguration(i), self.discrete_env.NodeIdToConfiguration(costQueueElement[1]), "k", 1.5)
-		actionlist[i] = successor[i]
                 if i not in visitedQueue and i not in Queue:        
                     Queue.append(i)
                     dictionary[i]=costQueueElement[1]
@@ -58,7 +59,6 @@ class AStarPlanner(object):
                         X=dictionary[X]
                     heurPlusG=self.planning_env.ComputeHeuristicCost(i, goalPoint) + costG
                     costQueue.append([heurPlusG,i]) 
-	    #print costQueue
             costQueue=sorted(costQueue)
             costQueueElement=costQueue.pop(0)
             Queue.remove(costQueueElement[1])
@@ -69,20 +69,27 @@ class AStarPlanner(object):
 	duration = time.clock() - starttime
         print "Goal Found"
 	
+	self.planning_env.robot.SetTransform(self.planning_env.determineThePose(start_config))
         point=goalPoint
 	pathlength = 0
+	
         while point!=startPoint:
             pointPlan.append(self.discrete_env.NodeIdToConfiguration(point))
 	    pathlength = pathlength + self.planning_env.ComputeDistance(point, dictionary[point])
             point=dictionary[point]
+	    
 	   
         pointPlan.append(start_config)
-        #pointPlan.reverse()
+	#plan.append([actionlist[self.discrete_env.ConfigurationToNodeId(start_config)]])
+        pointPlan.reverse()
 	
-	for i in pointPlan:
+	
+	
+	for i in pointPlan[1:]:
 	    idx = self.discrete_env.ConfigurationToNodeId(i)
 	    plan.append(actionlist[idx])
-
+	plan.append(actionlist[goalPoint])
+	plan.reverse()
 	plan  = numpy.array(plan)
 	    
 	print "Time =", duration, "s"
