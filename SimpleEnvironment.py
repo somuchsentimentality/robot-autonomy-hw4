@@ -1,4 +1,4 @@
-import numpy, openravepy
+import numpy, openravepy, math
 import pylab as pl
 from DiscreteEnvironment import DiscreteEnvironment
 
@@ -113,21 +113,23 @@ class SimpleEnvironment(object):
             # Since an action is composed of only 3 variables (left, right, and duration),
             # It is not unreasonable to do a comprehensive action generation.
             omega_range = 1; # min/max velocity
-            resolution = 0.1;
+            resolution = 0.125;
             n_pts = int(omega_range * 2 / resolution);
 
             omega = numpy.linspace(-omega_range, omega_range, n_pts)
-            duration = 1 # Can make this a range for even more options
+            duration = numpy.linspace(0.1, 2, 10) # Can make this a range for even more options
+
 
             # Generate all combinations of left and right wheel velocities
 	    #omega = numpy.array([-0.2, -0.1, 0, 0.1, 0.2])
             for om_1 in omega:
                 for om_2 in omega:
-                    ctrl = Control(om_1, om_2, duration)
-                    footprint = self.GenerateFootprintFromControl(start_config, ctrl, stepsize=0.01)
-                    this_action = Action(ctrl, footprint)
+                    for dur in duration:
+                        ctrl = Control(om_1, om_2, dur)
+                        footprint = self.GenerateFootprintFromControl(start_config, ctrl, stepsize=0.01)
+                        this_action = Action(ctrl, footprint)
 
-                    self.actions[idx].append(this_action)
+                        self.actions[idx].append(this_action)
          
             
     def GetSuccessors(self, node_id):
@@ -138,7 +140,7 @@ class SimpleEnvironment(object):
         # TODO: Here you will implement a function that looks
         #  up the configuration associated with the particular node_id
         #  and return a list of node_ids and controls that represent the neighboring
-        #  nodes
+        #  nodesc
         
 	
 	currentConfiguration = self.discrete_env.NodeIdToConfiguration(node_id)
@@ -196,15 +198,19 @@ class SimpleEnvironment(object):
 	# Heuristic Cost in uncertain for this case with three resolution,
 	# I will update this part later
 
-	start_coord = self.discrete_env.NodeIdToGridCoord(start_id)
+        start_coord = self.discrete_env.NodeIdToGridCoord(start_id)
         goal_coord = self.discrete_env.NodeIdToGridCoord(goal_id)
-	
-	cost = 0
-	for i in range(len(start_coord)-1):
-	    cost = cost + abs(goal_coord[i]-start_coord[i])*self.discrete_env.resolution[i]
+
+        cost = 0
+        for i in range(len(start_coord)):
+            diff = abs(goal_coord[i]-start_coord[i])
+
+            # if i == 2:
 
 
-        return cost
+            cost += diff**2 
+
+        return math.sqrt(cost)
 
     def PrintActions(self):
         # for key in self.actions.keys():

@@ -79,7 +79,7 @@ if __name__ == "__main__":
     base_planner = AStarPlanner(base_env, visualize = False)
     arm_planner = None
     # TODO: Here initialize your arm planner
-    arm_planner = RRTPlanner(arm_env,visualize)
+    arm_planner = RRTPlanner(arm_env,visualize = False)
    
     # add a table and move the robot into place
     table = env.ReadKinBodyXMLFile('models/objects/table.kinbody.xml')
