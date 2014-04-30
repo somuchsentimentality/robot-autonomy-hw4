@@ -57,10 +57,20 @@ class GraspPlanner(object):
         goal_idx = 0
         base_pose = goals[goal_idx][1] # Don't care which, just need one that works
         grasp_config = goals[goal_idx][2]
+        T_pose = goals[goal_idx][3]
 
         print "Base_pose: %r\n Grasp_config: %r" % (base_pose, grasp_config)
 
+        start_pose = self.robot.GetTransform()
+        start_config = self.robot.GetActiveDOFValues()
+        self.robot.SetTransform(T_pose)
+        self.robot.SetActiveDOFValues(grasp_config)
 
+        import IPython
+        IPython.embed()
+
+        self.robot.SetTransform(start_pose)
+        self.robot.SetActiveDOFValues(start_config)
         
         return base_pose, grasp_config
 
@@ -97,7 +107,7 @@ class GraspPlanner(object):
                 # values[manip.GetArmIndices()] = arm_config
                 pose = self.robot.GetTransform()
                 xy_pose = [pose[0][3], pose[1][3]]
-                goals.append((Tgrasp,xy_pose,arm_config))
+                goals.append((Tgrasp,xy_pose,arm_config,pose))
                 # import IPython
                 # IPython.embed()
                 # Visualize - only works if with self.robot() is removed

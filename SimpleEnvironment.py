@@ -21,7 +21,7 @@ class SimpleEnvironment(object):
 
 	#For Collision Check, add table
 	self.env = self.robot.GetEnv()
-        self.table = self.env.GetBodies()[1]
+        # self.table = self.env.GetBodies()[1]
 
         self.boundary_limits = [[-5., -5., -numpy.pi], [5., 5., numpy.pi]]
         self.lower_limits, self.upper_limits = self.boundary_limits
@@ -151,7 +151,12 @@ class SimpleEnvironment(object):
 	    # For each action check whether generated footprint is collision free
 	    inBound = not ((config < self.lower_limits).any() or (config > self.upper_limits).any())
 	    self.robot.SetTransform(self.determineThePose(config))
-            collisionfree = not (self.env.CheckCollision(self.robot, self.table))
+            
+            collisionfree = True
+            for body in self.env.GetBodies():
+                if self.env.CheckCollision(self.robot, body):
+                    collisionfree = False
+                    break
 
             has_collision = False
             for fp in action.footprint:
