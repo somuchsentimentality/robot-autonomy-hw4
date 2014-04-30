@@ -49,6 +49,7 @@ class AStarPlanner(object):
             for i in successor:
 		if self.visualize:
                     self.planning_env.PlotEdge2(self.discrete_env.NodeIdToConfiguration(i), self.discrete_env.NodeIdToConfiguration(costQueueElement[1]), "k", 1.5)
+                    raw_input("Popped node, enter to continue")
                 if i not in visitedQueue and i not in Queue:        
                     Queue.append(i)
                     dictionary[i]=costQueueElement[1]

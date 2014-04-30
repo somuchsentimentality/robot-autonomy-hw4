@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     herb_base.SetCurrentConfiguration(start_config)
 
-    planner = AStarPlanner(base_env, visualize=False)
+    planner = AStarPlanner(base_env, visualize=True)
     plan = planner.Plan(start_config, goal_config)
     traj = herb_base.ConvertPlanToTrajectory(plan)
 

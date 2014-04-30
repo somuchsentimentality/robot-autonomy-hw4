@@ -32,8 +32,8 @@ class SimpleEnvironment(object):
         self.ConstructActions()
 
         self.PlotActionFootprints(0)
-        import IPython
-        IPython.embed()
+        
+        raw_input("Showing action footprints, hit enter to continue")
 	
 
     def GenerateFootprintFromControl(self, start_config, control, stepsize=0.01):
@@ -124,21 +124,18 @@ class SimpleEnvironment(object):
             duration = 1 # Can make this a range for even more options
 
             controls = []
-            long_duration = 3
+            long_duration = 2
             duration = 1.5
             # controls.append(om1, om2, duration)
-            controls.append(Control(1, 0.5, long_duration))
-            controls.append(Control(0.5, 1, long_duration))
-            controls.append(Control(-1, -0.5, long_duration))
-            controls.append(Control(-0.5, -1, long_duration))
-            
-            controls.append(Control(1, 0.2, long_duration))
-            controls.append(Control(0.2, 1, long_duration))
-            controls.append(Control(-1, -0.2, long_duration))
-            controls.append(Control(-0.2, -1, long_duration))
+            controls.append(Control(1, 0.5, 1))   # forward right
+            controls.append(Control(0.5, 1, 1))   # forward left
 
-            controls.append(Control(1, 1, duration))
-            controls.append(Control(-1, -1, duration))
+            controls.append(Control(-1, 1, 1))   # turn left
+            controls.append(Control(1, -1, 1))   # turn right
+
+            controls.append(Control(1, 1, 2))     # forward short
+            controls.append(Control(1, 1, 4))   # forward middle
+            controls.append(Control(1, 1, 6))   # forward long
 
 
             for ctrl in controls:
