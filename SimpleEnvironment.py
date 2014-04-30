@@ -18,13 +18,18 @@ class SimpleEnvironment(object):
     def __init__(self, herb, resolution):
         self.herb = herb
         self.robot = herb.robot
+
+	#For Collision Check, add table
+	self.env = self.robot.GetEnv()
+        self.table = self.env.GetBodies()[1]
+
         self.boundary_limits = [[-5., -5., -numpy.pi], [5., 5., numpy.pi]]
         self.lower_limits, self.upper_limits = self.boundary_limits
-	print self.lower_limits
+	#print self.lower_limits
         self.discrete_env = DiscreteEnvironment(resolution, self.lower_limits, self.upper_limits)
-
         self.resolution = resolution
         self.ConstructActions()
+	
 
     def GenerateFootprintFromControl(self, start_config, control, stepsize=0.01):
 
@@ -114,6 +119,7 @@ class SimpleEnvironment(object):
             duration = 1 # Can make this a range for even more options
 
             # Generate all combinations of left and right wheel velocities
+	    #omega = numpy.array([-0.2, -0.1, 0, 0.1, 0.2])
             for om_1 in omega:
                 for om_2 in omega:
                     ctrl = Control(om_1, om_2, duration)
@@ -123,7 +129,6 @@ class SimpleEnvironment(object):
                     self.actions[idx].append(this_action)
          
             
-
     def GetSuccessors(self, node_id):
 
         successors = {}
@@ -140,9 +145,25 @@ class SimpleEnvironment(object):
 	#print currentCoord
 	#print currentCoord[2]
 	for action in self.actions[currentCoord[2]]:
-	    
 	    successorNodeid = self.discrete_env.ConfigurationToNodeId(currentConfiguration + action.footprint[len(action.footprint)-1])
-	    successors[successorNodeid] = action
+	    config = self.discrete_env.NodeIdToConfiguration(successorNodeid)
+	    
+	    # For each action check whether generated footprint is collision free
+	    inBound = not ((config < self.lower_limits).any() or (config > self.upper_limits).any())
+	    self.robot.SetTransform(self.determineThePose(config))
+            collisionfree = not (self.env.CheckCollision(self.robot, self.table))
+
+            has_collision = False
+            for fp in action.footprint:
+                fp_config = fp.copy()
+                fp_config[0] += config[0]
+                fp_config[1] += config[1]
+                if (not (inBound and collisionfree)):
+                    has_collision = True
+                    break
+            if (not has_collision):
+                successors[successorNodeid] = action
+		
 	#print successors
         return successors
 
@@ -157,7 +178,7 @@ class SimpleEnvironment(object):
 	start_config = numpy.array(self.discrete_env.NodeIdToConfiguration(start_id))
         end_config = numpy.array(self.discrete_env.NodeIdToConfiguration(end_id))
         
-        dist = numpy.linalg.norm(start_config - end_config)
+        dist = numpy.linalg.norm(start_config[:2] - end_config[:2])
 
         return dist
 
@@ -176,7 +197,7 @@ class SimpleEnvironment(object):
         goal_coord = self.discrete_env.NodeIdToGridCoord(goal_id)
 	
 	cost = 0
-	for i in range(len(start_coord)):
+	for i in range(len(start_coord)-1):
 	    cost = cost + abs(goal_coord[i]-start_coord[i])*self.discrete_env.resolution[i]
 	    
 	#cost = cost*self.discrete_env.resolution
@@ -194,3 +215,12 @@ class SimpleEnvironment(object):
         pl.plot([sconfig[0], econfig[0]],
                 [sconfig[1], econfig[1]],
                 color, linewidth=size)
+
+
+    def determineThePose (self, config):
+	pose = self.robot.GetTransform()
+        pose[0:3,3] = numpy.array([config[0], config[1], 0.0])
+        a = config[2]
+        rotation = numpy.array([[numpy.cos(a), -numpy.sin(a),0.0],[numpy.sin(a),numpy.cos(a),0.0],[0.0,0.0,1.0]])
+        pose[0:3,0:3] = rotation
+	return pose
