@@ -113,11 +113,11 @@ class SimpleEnvironment(object):
             # Since an action is composed of only 3 variables (left, right, and duration),
             # It is not unreasonable to do a comprehensive action generation.
             omega_range = 1; # min/max velocity
-            resolution = 0.5;
+            resolution = 0.25;
             n_pts = int(omega_range * 2 / resolution);
 
             omega = numpy.linspace(-omega_range, omega_range, n_pts)
-            duration = numpy.linspace(0.05, 1, 20) # Can make this a range for even more options
+            duration = numpy.linspace(0.01, 1, 10) # Can make this a range for even more options
 
 
             # Generate all combinations of left and right wheel velocities
@@ -133,31 +133,28 @@ class SimpleEnvironment(object):
          
             
     def GetSuccessors(self, node_id):
-
-     
-	successors = {}
+        successors = {}
 
         # TODO: Here you will implement a function that looks
         #  up the configuration associated with the particular node_id
         #  and return a list of node_ids and controls that represent the neighboring
         #  nodesc
-        
+        currentConfiguration = self.discrete_env.NodeIdToConfiguration(node_id)
+        currentCoord = self.discrete_env.NodeIdToGridCoord(node_id)
 	
-	currentConfiguration = self.discrete_env.NodeIdToConfiguration(node_id)
-	currentCoord = self.discrete_env.NodeIdToGridCoord(node_id)
-	
-	for action in self.actions[currentCoord[2]]:
-	    successorNodeid = self.discrete_env.ConfigurationToNodeId(currentConfiguration + action.footprint[len(action.footprint)-1])
-	    config = self.discrete_env.NodeIdToConfiguration(successorNodeid)
+        for action in self.actions[currentCoord[2]]:
+            config = currentConfiguration + action.footprint[len(action.footprint)-1]
+            successorNodeid = self.discrete_env.ConfigurationToNodeId(config)
 	    
-	    # For each action check whether generated footprint is collision free
-	    inBound = not ((config < self.lower_limits).any() or (config > self.upper_limits).any())
-	    self.robot.SetTransform(self.determineThePose(config))
+            # For each action check whether generated footprint is collision free
+            inBound = not ((config < self.lower_limits).any() or (config > self.upper_limits).any())
+            self.robot.SetTransform(self.determineThePose(config))
             
             collisionfree = True
             for body in self.env.GetBodies():
                 if self.env.CheckCollision(self.robot, body):
                     collisionfree = False
+                    print "Successor in collision!"
                     break
 
             has_collision = False
