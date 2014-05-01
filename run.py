@@ -76,7 +76,7 @@ if __name__ == "__main__":
     herb_base = SimpleRobot(env, robot)
     base_env = SimpleEnvironment(herb_base, resolution)
 
-    base_planner = AStarPlanner(base_env, visualize = False)
+    base_planner = AStarPlanner(base_env, visualize = True)
     arm_planner = None
     # TODO: Here initialize your arm planner
     arm_planner = RRTPlanner(arm_env,visualize = False)

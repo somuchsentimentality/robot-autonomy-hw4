@@ -31,9 +31,8 @@ class SimpleEnvironment(object):
         self.resolution = resolution
         self.ConstructActions()
 
-        self.PlotActionFootprints(0)
-        
-        raw_input("Showing action footprints, hit enter to continue")
+        # self.PlotActionFootprints(0)
+        # raw_input("Showing action footprints, hit enter to continue")
 
         # import IPython
         # IPython.embed()
@@ -125,13 +124,13 @@ class SimpleEnvironment(object):
 
             controls = []
             # controls.append(om1, om2, duration)
-            controls.append(Control(0.5,0.5,1.0))
-            controls.append(Control(1.0,1.0,1.0))
-            controls.append(Control(1.0,1.0,4.0))
-            controls.append(Control(-0.5,0.5,1))
-            controls.append(Control(0.5,-0.5,1))
-            controls.append(Control(0.5,1.0,4.0))
-            controls.append(Control(1.0,0.5,4.0))
+            controls.append(Control(0.5,0.5,1.0)) # Forward short
+            controls.append(Control(1.0,1.0,1.0)) # Forward middle
+            controls.append(Control(1.0,1.0,4.0)) # Forward long
+            controls.append(Control(-0.5,0.5,1))  # Right rotate
+            controls.append(Control(0.5,-0.5,1))  # Left rotate
+            controls.append(Control(0.5,1.0,4.0)) # Right + forward
+            controls.append(Control(1.0,0.5,4.0)) # Left + forward
 
 
             for ctrl in controls:
@@ -151,8 +150,6 @@ class SimpleEnvironment(object):
         #  nodesc
         currentConfiguration = self.discrete_env.NodeIdToConfiguration(node_id)
         currentCoord = self.discrete_env.NodeIdToGridCoord(node_id)
-	
-        print "num(actions):%r, currentCoord:%r" % (len(self.actions), currentCoord)
 
         for action in self.actions[currentCoord[2]]:
             end_fp_config = currentConfiguration + action.footprint[len(action.footprint)-1]
