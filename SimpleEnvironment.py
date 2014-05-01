@@ -34,6 +34,9 @@ class SimpleEnvironment(object):
         self.PlotActionFootprints(0)
         
         raw_input("Showing action footprints, hit enter to continue")
+
+        # import IPython
+        # IPython.embed()
 	
 
     def GenerateFootprintFromControl(self, start_config, control, stepsize=0.01):
@@ -113,9 +116,6 @@ class SimpleEnvironment(object):
             # TODO: Here you will construct a set of actionson
             #  to be used during the planning process
             #
-
-            # Since an action is composed of only 3 variables (left, right, and duration),
-            # It is not unreasonable to do a comprehensive action generation.
             omega_range = 0.5; # min/max velocity
             resolution = 0.1;
             n_pts = int(omega_range * 2 / resolution);
@@ -124,18 +124,14 @@ class SimpleEnvironment(object):
             duration = 1 # Can make this a range for even more options
 
             controls = []
-            long_duration = 2
-            duration = 1.5
             # controls.append(om1, om2, duration)
-            controls.append(Control(1, 0.5, 1))   # forward right
-            controls.append(Control(0.5, 1, 1))   # forward left
-
-            controls.append(Control(-1, 1, 1))   # turn left
-            controls.append(Control(1, -1, 1))   # turn right
-
-            controls.append(Control(1, 1, 2))     # forward short
-            controls.append(Control(1, 1, 4))   # forward middle
-            controls.append(Control(1, 1, 6))   # forward long
+            controls.append(Control(0.5,0.5,1.0))
+            controls.append(Control(1.0,1.0,1.0))
+            controls.append(Control(1.0,1.0,4.0))
+            controls.append(Control(-0.5,0.5,1))
+            controls.append(Control(0.5,-0.5,1))
+            controls.append(Control(0.5,1.0,4.0))
+            controls.append(Control(1.0,0.5,4.0))
 
 
             for ctrl in controls:
@@ -145,8 +141,10 @@ class SimpleEnvironment(object):
                 self.actions[idx].append(this_action)
            
     def GetSuccessors(self, node_id):
-        successors = {}
+        successors = []
+        actions_returned = []
 
+        save_Transform = self.robot.GetTransform()
         # TODO: Here you will implement a function that looks
         #  up the configuration associated with the particular node_id
         #  and return a list of node_ids and controls that represent the neighboring
@@ -154,13 +152,26 @@ class SimpleEnvironment(object):
         currentConfiguration = self.discrete_env.NodeIdToConfiguration(node_id)
         currentCoord = self.discrete_env.NodeIdToGridCoord(node_id)
 	
+        print "num(actions):%r, currentCoord:%r" % (len(self.actions), currentCoord)
+
         for action in self.actions[currentCoord[2]]:
-            config = currentConfiguration + action.footprint[len(action.footprint)-1]
-            successorNodeid = self.discrete_env.ConfigurationToNodeId(config)
-	    
+            end_fp_config = currentConfiguration + action.footprint[len(action.footprint)-1]
+            
+            angle = end_fp_config[2]
+            save_angle = angle
+            while angle > numpy.pi:
+                angle -= 2*numpy.pi 
+            while angle < -numpy.pi:
+                angle += 2*numpy.pi
+
+            end_fp_config[2] = angle
+
+            successorNodeid = self.discrete_env.ConfigurationToNodeId(end_fp_config)
+	        
             # For each action check whether generated footprint is collision free
-            inBound = not ((config < self.lower_limits).any() or (config > self.upper_limits).any())
-            self.robot.SetTransform(self.determineThePose(config))
+            inBound = not ((end_fp_config < self.lower_limits).any() or (end_fp_config > self.upper_limits).any())
+            
+            self.robot.SetTransform(self.determineThePose(end_fp_config))
             
             collisionfree = True
             for body in self.env.GetBodies():
@@ -172,14 +183,18 @@ class SimpleEnvironment(object):
             has_collision = False
             for fp in action.footprint:
                 fp_config = fp.copy()
-                fp_config[0] += config[0]
-                fp_config[1] += config[1]
+                fp_config[0] += end_fp_config[0]
+                fp_config[1] += end_fp_config[1]
                 if (not (inBound and collisionfree)):
                     has_collision = True
                     break
             if (not has_collision):
-                successors[successorNodeid] = action
-        return successors
+                successors.append(successorNodeid)
+                actions_returned.append(action)
+
+
+        self.robot.SetTransform(save_Transform)        
+        return successors, actions_returned
 
     def ComputeDistance(self, start_id, end_id):
 
@@ -203,27 +218,37 @@ class SimpleEnvironment(object):
         # TODO: Here you will implement a function that 
         # computes the heuristic cost between the configurations
         # given by the two node ids
-        
-	# Heuristic Cost in uncertain for this case with three resolution,
-	# I will update this part later
-
+    
         start_coord = self.discrete_env.NodeIdToGridCoord(start_id)
         goal_coord = self.discrete_env.NodeIdToGridCoord(goal_id)
 
+        grid_distance = self.GetConfigXYDistance(start_id, goal_id)
+
         cost = 0
-        for i in range(len(start_coord)):
-            diff = abs(goal_coord[i]-start_coord[i])
 
-            # Weight heavily towards orientation
-            # if i == 2:
-            #     diff *= 0.8
-            # else:
-            #     diff *= 0.1
-
-
-            cost += diff**2 
+        if grid_distance > 3: 
+            # If we are far away from our goal in xy
+            # then don't worry about the orientation
+            for i in range(len(start_coord)-1):
+                diff = abs(goal_coord[i]-start_coord[i])
+                cost += diff**2 
+        else:
+            # If we are close to our goal, look at orientation
+            for i in range(len(start_coord)):
+                diff = abs(goal_coord[i]-start_coord[i])
+                cost += diff**2 
 
         return math.sqrt(cost)
+
+    def GetConfigXYDistance(self,nodeID_1, nodeID_2):
+        config_1 = self.discrete_env.NodeIdToConfiguration(nodeID_1)
+        config_2 = self.discrete_env.NodeIdToConfiguration(nodeID_2)
+        paired = zip(config_1, config_2)
+
+        diff_sqrd = [(x[0] - x[1])*(x[0] - x[1]) for x in paired]
+
+        dist = math.sqrt(diff_sqrd[0] + diff_sqrd[1]) # only use x,y coords
+        return dist
 
     def PrintActions(self):
         # for key in self.actions.keys():
@@ -231,6 +256,35 @@ class SimpleEnvironment(object):
         for action in self.actions[key]:
             c = action.control
             print "(%.2f %.2f) %.2f s" % (c.ul, c.ur, c.dt)
+
+    def InitializePlot(self, goal_config):
+        self.fig = pl.figure()
+        pl.xlim([self.lower_limits[0], self.upper_limits[0]])
+        pl.ylim([self.lower_limits[1], self.upper_limits[1]])
+        pl.plot(goal_config[0], goal_config[1], 'gx')
+
+        # Show all obstacles in environment
+        for b in self.robot.GetEnv().GetBodies():
+            if b.GetName() == self.robot.GetName():
+                continue
+            bb = b.ComputeAABB()
+            pl.plot([bb.pos()[0] - bb.extents()[0],
+                     bb.pos()[0] + bb.extents()[0],
+                     bb.pos()[0] + bb.extents()[0],
+                     bb.pos()[0] - bb.extents()[0],
+                     bb.pos()[0] - bb.extents()[0]],
+                    [bb.pos()[1] - bb.extents()[1],
+                     bb.pos()[1] - bb.extents()[1],
+                     bb.pos()[1] + bb.extents()[1],
+                     bb.pos()[1] + bb.extents()[1],
+                     bb.pos()[1] - bb.extents()[1]], 'r')
+                    
+                     
+        pl.ion()
+        pl.show()
+
+    def PlotEdge(self, sconfig, econfig):
+        self.PlotEdge2(sconfig, econfig, 'k', 2)
 
     def PlotEdge2(self, sconfig, econfig, color, size):
         pl.plot([sconfig[0], econfig[0]],
@@ -245,3 +299,5 @@ class SimpleEnvironment(object):
         rotation = numpy.array([[numpy.cos(a), -numpy.sin(a),0.0],[numpy.sin(a),numpy.cos(a),0.0],[0.0,0.0,1.0]])
         pose[0:3,0:3] = rotation
 	return pose
+
+    

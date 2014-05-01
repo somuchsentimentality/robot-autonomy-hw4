@@ -51,9 +51,16 @@ class DiscreteEnvironment(object):
         i=0
         coord = [0] * self.dimension
         while i<len(config):
-            coord[i] = numpy.floor((config[i] - self.lower_limits[i])  / self.resolution[i])
+            print "(%0.3f - %0.3f) / %0.3f" % (config[i], self.lower_limits[i], self.resolution[i])
+            this_coord = numpy.floor( (config[i] - self.lower_limits[i])  / self.resolution[i])
+            coord[i] = self.clamp(this_coord, 0, self.num_cells[i]-1)
             i = i+1
+
+        print "cfg: %r, coord: %r" % (config, coord)
         return coord
+
+    def clamp(self, n, minn, maxn):
+        return max(min(maxn, n), minn)
 
     def GridCoordToConfiguration(self, coord):
         
